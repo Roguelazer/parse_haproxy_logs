@@ -226,6 +226,9 @@ sub handler($$$$$$)
 		elsif ($action eq "servers") {
 			print "$backend\n";
 		}
+		elsif ($action eq "timestamps") {
+			print "$timestamp\n";
+		}
 	}
 }
 
@@ -243,8 +246,8 @@ sub main()
 		"min-time=i" => \$mintime,
 		"action=s" => \$action,
 		"errors-only" => \$errorsonly);
-	if ($action ne "print" && $action ne "queries" && $action ne "servers") {
-		print "Actions: (print, queries, servers)\n";
+	if ($action ne "print" && $action ne "queries" && $action ne "servers" && $action ne "timestamps") {
+		print "Actions: (print, queries, servers, timestamps)\n";
 		exit(1);
 	}
 	handler($action, $server, $client, $proxy, $mintime, $errorsonly);
