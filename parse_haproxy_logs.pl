@@ -133,7 +133,7 @@ sub parse_hadate($)
 	return timelocal($sec, $min, $hour, $mday, $mon, $year);
 }
 
-sub handler($$$$$$)
+sub handler($$$$$$$)
 {
 	my $action = shift;
 	my $server = shift;
@@ -141,6 +141,7 @@ sub handler($$$$$$)
 	my $proxy = shift;
 	my $mintime = shift;
 	my $errorsonly = shift;
+	my $search_code = shift;
 	my $start_time = undef;
 	for (<>) {
 		my $date = substr($_, 0, 15) . "\n";
@@ -177,6 +178,9 @@ sub handler($$$$$$)
 		my $reqheaders = $fields[14];
 		my $resheaders = $fields[15];
 		if ($errorsonly && $termstate eq "----") {
+			next;
+		}
+		if (defined($search_code) and $code ne $search_code) {
 			next;
 		}
 		(my $Tq, my $Tw, my $Tc, my $Tr, my $Tt) = get_times($timers);
@@ -240,17 +244,19 @@ sub main()
 	my $proxy = 0;
 	my $mintime = 0;
 	my $errorsonly = 0;
-	GetOptions("client" => \$client,
-		"server" => \$server,
+	my $code = undef;
+	GetOptions("client|c" => \$client,
+		"server|s" => \$server,
 		"proxy" => \$proxy,
 		"min-time=i" => \$mintime,
+		"code=s" => \$code,
 		"action=s" => \$action,
 		"errors-only" => \$errorsonly);
 	if ($action ne "print" && $action ne "queries" && $action ne "servers" && $action ne "timestamps") {
 		print "Actions: (print, queries, servers, timestamps)\n";
 		exit(1);
 	}
-	handler($action, $server, $client, $proxy, $mintime, $errorsonly);
+	handler($action, $server, $client, $proxy, $mintime, $errorsonly, $code);
 }
 
 unless(caller) {
