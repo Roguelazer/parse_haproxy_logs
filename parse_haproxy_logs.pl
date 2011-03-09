@@ -18,10 +18,10 @@ sub print_times($) {
 	my $timers = shift;
 	(my $Tq, my $Tw, my $Tc, my $Tr, my $Tt) = split(/\//, $timers);
 	print "  time waiting (total)  : $Tq\n";
-	print "  time in queues        : $Tw\n";
+	print "  time in queues		: $Tw\n";
 	print "  time connecting to be : $Tc\n";
 	print "  time waiting for be   : $Tr\n";
-	print "  total time            : $Tt\n";
+	print "  total time			: $Tt\n";
 }
 
 sub get_termstate($)
@@ -40,6 +40,8 @@ sub print_termstate($)
 		print "unexpectedly aborted by client";
 	} elsif ($first_event eq 'S') {
 		print "refused by server";
+	} elsif ($first_event eq 'P') {
+		print "aborted by proxy";
 	} elsif ($first_event eq 'R') {
 		print "proxy resource exhausted";
 	} elsif ($first_event eq 'I') {
@@ -48,8 +50,10 @@ sub print_termstate($)
 		print "client-side timeout";
 	} elsif ($first_event eq 's') {
 		print "server-side timeout";
-	} else {
+	} elsif ($first_event eq '-') {
 		print "normal";
+	} else {
+		print "unknown";
 	}
 	print "\n";
 	print "  session state : ";
@@ -67,8 +71,10 @@ sub print_termstate($)
 		print "transmitting LAST data";
 	} elsif ($session_state eq 'T') {
 		print "request tarpitted";
-	} else {
+	} elsif ($session_state eq '-') {
 		print "normal";
+	} else {
+		print "unknown";
 	}
 	print "\n";
 }
@@ -84,11 +90,11 @@ sub print_hastate($)
 {
 	my $hastate = shift;
 	(my $actconn, my $feconn, my $beconn, my $srv_conn, my $retries) = split(/\//, $hastate);
-	print "  active connections    : $actconn\n";
+	print "  active connections	: $actconn\n";
 	print "  front-end connections : $feconn\n";
 	print "  back-end connections  : $beconn\n";
-	print "  this server conns     : $srv_conn\n";
-	print "  retries               : $retries\n";
+	print "  this server conns	 : $srv_conn\n";
+	print "  retries			   : $retries\n";
 	return ($actconn, $feconn, $beconn, $srv_conn, $retries);
 }
 
@@ -127,12 +133,14 @@ sub parse_hadate($)
 	return timelocal($sec, $min, $hour, $mday, $mon, $year);
 }
 
-sub handler($$$$)
+sub handler($$$$$$)
 {
 	my $action = shift;
-	my $clientonly = shift;
-	my $serveronly = shift;
+	my $server = shift;
+	my $client = shift;
+	my $proxy = shift;
 	my $mintime = shift;
+	my $errorsonly = shift;
 	my $start_time = undef;
 	for (<>) {
 		my $date = substr($_, 0, 15) . "\n";
@@ -168,18 +176,23 @@ sub handler($$$$)
 		my $queues = $fields[13];
 		my $reqheaders = $fields[14];
 		my $resheaders = $fields[15];
-		if ($termstate eq "----") {
+		if ($errorsonly && $termstate eq "----") {
 			next;
 		}
 		(my $Tq, my $Tw, my $Tc, my $Tr, my $Tt) = get_times($timers);
 		(my $first_event, my $session_state, my $persistence_cookie, my $persistence_ops) = get_termstate($termstate);
-		if ($clientonly) {
-			if (!($first_event eq 'C' or $first_event eq 'c')) {
+		if (!$client) {
+			if ($first_event eq 'C' or $first_event eq 'c') {
 				next;
 			}
 		}
-		if ($serveronly) {
-			if (!($first_event eq 'S' or $first_event eq 's')) {
+		if (!$server) {
+			if ($first_event eq 'S' or $first_event eq 's') {
+				next;
+			}
+		}
+		if (!$proxy) {
+			if ($first_event eq 'P' or $first_event eq 'R' or $first_event eq 'I') {
 				next;
 			}
 		}
@@ -196,7 +209,7 @@ sub handler($$$$)
 			print "Backend: $backend\n";
 			print "HA state:   $hastate\n";
 			print_hastate($hastate);
-			print "Queues:     $queues\n";
+			print "Queues:	 $queues\n";
 			print_queues($queues);
 			if (defined($reqheaders)) {
 				print "Req headers: $reqheaders\n";
@@ -219,20 +232,26 @@ sub handler($$$$)
 sub main()
 {
 	my $action = "print";
-	my $clientonly = 0;
-	my $serveronly = 0;
+	my $server = 0;
+	my $client = 0;
+	my $proxy = 0;
 	my $mintime = 0;
-	GetOptions("client-only" => \$clientonly,
-		"server-only" => \$serveronly,
+	my $errorsonly = 0;
+	GetOptions("client" => \$client,
+		"server" => \$server,
+		"proxy" => \$proxy,
 		"min-time=i" => \$mintime,
-		"action=s" => \$action);
+		"action=s" => \$action,
+		"errors-only" => \$errorsonly);
 	if ($action ne "print" && $action ne "queries" && $action ne "servers") {
 		print "Actions: (print, queries, servers)\n";
 		exit(1);
 	}
-	handler($action, $clientonly, $serveronly, $mintime);
+	handler($action, $server, $client, $proxy, $mintime, $errorsonly);
 }
 
 unless(caller) {
 	main();
 }
+
+# vim: set noexpandtab ts=4 sw=4:`
