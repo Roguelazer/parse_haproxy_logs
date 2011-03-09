@@ -18,10 +18,10 @@ sub print_times($) {
 	my $timers = shift;
 	(my $Tq, my $Tw, my $Tc, my $Tr, my $Tt) = split(/\//, $timers);
 	print "  time waiting (total)  : $Tq\n";
-	print "  time in queues		: $Tw\n";
+	print "  time in queues        : $Tw\n";
 	print "  time connecting to be : $Tc\n";
 	print "  time waiting for be   : $Tr\n";
-	print "  total time			: $Tt\n";
+	print "  total time            : $Tt\n";
 }
 
 sub get_termstate($)
@@ -90,11 +90,11 @@ sub print_hastate($)
 {
 	my $hastate = shift;
 	(my $actconn, my $feconn, my $beconn, my $srv_conn, my $retries) = split(/\//, $hastate);
-	print "  active connections	: $actconn\n";
+	print "  active connections    : $actconn\n";
 	print "  front-end connections : $feconn\n";
 	print "  back-end connections  : $beconn\n";
-	print "  this server conns	 : $srv_conn\n";
-	print "  retries			   : $retries\n";
+	print "  this server conns     : $srv_conn\n";
+	print "  retries               : $retries\n";
 	return ($actconn, $feconn, $beconn, $srv_conn, $retries);
 }
 
